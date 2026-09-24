@@ -49,16 +49,17 @@ COPY deploy/entrypoint.sh /CLIProxyAPI/entrypoint.sh
 RUN chmod +x /CLIProxyAPI/entrypoint.sh
 
 # Fetch + verify the mirasim plugin for linux/amd64 (what Render runs).
-# ZIP root must contain exactly one file: mirasim.so (enforced by unzip -l).
+# Download with the release asset's own filename so `sha256sum -c` finds
+# it (checksums.txt lists files by name), then unpack into plugins/.
 ARG MIRASIM_VERSION
-RUN curl -fsSL -o /tmp/mirasim.zip \
+RUN curl -fsSL -o "/tmp/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" \
     "https://github.com/KIDA-MNESIA/cpa-plugin-mirasim/releases/download/v${MIRASIM_VERSION}/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" \
   && curl -fsSL -o /tmp/checksums.txt \
     "https://github.com/KIDA-MNESIA/cpa-plugin-mirasim/releases/download/v${MIRASIM_VERSION}/checksums.txt" \
   && cd /tmp && grep "mirasim_${MIRASIM_VERSION}_linux_amd64.zip" checksums.txt | sha256sum -c - \
-  && unzip -l /tmp/mirasim.zip \
-  && unzip -o /tmp/mirasim.zip -d /CLIProxyAPI/plugins \
-  && rm -f /tmp/mirasim.zip /tmp/checksums.txt /CLIProxyAPI/plugins/*.h \
+  && unzip -l "/tmp/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" \
+  && unzip -o "/tmp/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" -d /CLIProxyAPI/plugins \
+  && rm -f /tmp/mirasim_*.zip /tmp/checksums.txt /CLIProxyAPI/plugins/*.h \
   && ls -lh /CLIProxyAPI/plugins/ \
   && file /CLIProxyAPI/plugins/mirasim.so
 
