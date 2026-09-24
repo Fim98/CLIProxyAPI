@@ -74,4 +74,22 @@ fi
 echo "entrypoint: plugins bundled:"
 ls -lh /CLIProxyAPI/plugins/ || true
 
+# 5) Seed auth-dir from env when the store starts empty (Render free tier
+# has an ephemeral filesystem, so a redeploy wipes auth-dir; re-running the
+# full OAuth login every deploy is the alternative). Encode your local
+# mirasim credential once:  base64 -i ~/.cli-proxy-api/mirasim-*.json | pbcopy
+# into Render env var MIRASIM_AUTH_B64. On this image auth-dir is
+# /root/.cli-proxy-api (see render.config.yaml; HOME=/root).
+AUTH_DIR="${CPA_AUTH_DIR:-$HOME/.cli-proxy-api}"
+if [ -n "${MIRASIM_AUTH_B64:-}" ]; then
+  if ! ls "$AUTH_DIR"/mirasim-*.json >/dev/null 2>&1; then
+    mkdir -p "$AUTH_DIR"
+    echo "$MIRASIM_AUTH_B64" | base64 -d > "$AUTH_DIR/mirasim-seed.json"
+    chmod 600 "$AUTH_DIR/mirasim-seed.json"
+    echo "entrypoint: seeded mirasim credential into $AUTH_DIR"
+  else
+    echo "entrypoint: mirasim credential already present, seed skipped"
+  fi
+fi
+
 exec "$@"
