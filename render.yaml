@@ -1,20 +1,23 @@
-# Render Blueprint for CLIProxyAPI + mirasim plugin (A方案: 烘进镜像).
-# Push this repo to YOUR OWN GitHub repo, then Render -> New -> Blueprint
-# -> select the repo. Render builds Dockerfile.render automatically.
+# Render Blueprint for CLIProxyAPI + mirasim plugin baked into the image.
+#
+# Render -> New -> Blueprint -> select this repo. Render always builds
+# ./Dockerfile (the Blueprint spec has no dockerfilePath field), so the
+# plugin-enabled Dockerfile IS ./Dockerfile here; the pristine upstream
+# image definition is kept as Dockerfile.upstream for reference.
+#
+# Build arg MIRASIM_VERSION pins the plugin release. Bump it together
+# with the .so release on Fim98/cpa-plugin-mirasim (fork of KIDA-MNESIA).
 services:
   - type: web
     name: cpa
     runtime: docker
-    dockerfilePath: ./Dockerfile.render
-    # Build-time plugin version. Bump together with the .so release:
-    #   dockerBuildArgs: MIRASIM_VERSION=1.2.0
     dockerBuildArgs:
-      MIRASIM_VERSION: "1.2.0"
-    # Health check against the management plugin list (needs key, so use
-    # root path here; verify /v0/management/plugins manually after deploy).
+      MIRASIM_VERSION: "1.3.0"
+    # Health check against the root path; verify /v0/management/plugins
+    # manually after deploy (needs the management key).
     healthCheckPath: /
-    # CPA listens on $PORT via deploy/entrypoint.sh; default here is only
-    # a fallback when Render does not inject PORT.
+    # CPA listens on $PORT via deploy/entrypoint.sh; the default here is
+    # only a fallback when Render does not inject PORT.
     envVars:
       - key: PORT
         value: 8317

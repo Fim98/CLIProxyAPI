@@ -57,11 +57,13 @@ RUN chmod +x /CLIProxyAPI/entrypoint.sh
 # Fetch + verify the mirasim plugin for linux/amd64 (what Render runs).
 # Download with the release asset's own filename so `sha256sum -c` finds
 # it (checksums.txt lists files by name), then unpack into plugins/.
+# Source: Fim98/cpa-plugin-mirasim v1.3.0 — exposes and routes the relay's
+# Chinese model families (glm-/deepseek-/kimi-) on top of v1.2.0.
 ARG MIRASIM_VERSION
 RUN curl -fsSL -o "/tmp/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" \
-    "https://github.com/KIDA-MNESIA/cpa-plugin-mirasim/releases/download/v${MIRASIM_VERSION}/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" \
+    "https://github.com/Fim98/cpa-plugin-mirasim/releases/download/v${MIRASIM_VERSION}/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" \
   && curl -fsSL -o /tmp/checksums.txt \
-    "https://github.com/KIDA-MNESIA/cpa-plugin-mirasim/releases/download/v${MIRASIM_VERSION}/checksums.txt" \
+    "https://github.com/Fim98/cpa-plugin-mirasim/releases/download/v${MIRASIM_VERSION}/checksums.txt" \
   && cd /tmp && grep "mirasim_${MIRASIM_VERSION}_linux_amd64.zip" checksums.txt | sha256sum -c - \
   && unzip -l "/tmp/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" \
   && unzip -o "/tmp/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" -d /CLIProxyAPI/plugins \
