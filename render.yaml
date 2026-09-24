@@ -12,7 +12,7 @@ services:
     name: cpa
     runtime: docker
     dockerBuildArgs:
-      MIRASIM_VERSION: "1.3.0"
+      MIRASIM_VERSION: "1.3.1"
     # Health check against the root path; verify /v0/management/plugins
     # manually after deploy (needs the management key).
     healthCheckPath: /

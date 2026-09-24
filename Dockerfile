@@ -57,8 +57,9 @@ RUN chmod +x /CLIProxyAPI/entrypoint.sh
 # Fetch + verify the mirasim plugin for linux/amd64 (what Render runs).
 # Download with the release asset's own filename so `sha256sum -c` finds
 # it (checksums.txt lists files by name), then unpack into plugins/.
-# Source: Fim98/cpa-plugin-mirasim v1.3.0 — exposes and routes the relay's
-# Chinese model families (glm-/deepseek-/kimi-) on top of v1.2.0.
+# Source: Fim98/cpa-plugin-mirasim v1.3.1 — v1.2.0 plus the relay's Chinese
+# model families (glm-/deepseek-/kimi-), a Claude-wire streaming fix for
+# non-stream callers, and an access-token auth mode.
 ARG MIRASIM_VERSION
 RUN curl -fsSL -o "/tmp/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" \
     "https://github.com/Fim98/cpa-plugin-mirasim/releases/download/v${MIRASIM_VERSION}/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" \
