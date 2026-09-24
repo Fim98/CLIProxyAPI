@@ -38,6 +38,12 @@ COPY --from=builder /app/CLIProxyAPI /CLIProxyAPI/CLIProxyAPI
 # Keep the full example as reference inside the image.
 COPY --from=builder /app/config.example.yaml /CLIProxyAPI/config.example.yaml
 
+# Pre-bake the management control panel so the container never needs the
+# GitHub API (rate-limited on Render egress IPs) to serve /management.html.
+# CPA looks in <config dir>/static/management.html and skips the updater
+# when the file already exists.
+COPY static/management.html /CLIProxyAPI/static/management.html
+
 # Render deploy config -> becomes the live config.yaml.
 # NOTE: file is named render.config.yaml in git (config.yaml is gitignored),
 # copied to /CLIProxyAPI/config.yaml inside the image.
