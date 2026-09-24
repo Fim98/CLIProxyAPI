@@ -49,12 +49,13 @@ if [ -n "${PORT:-}" ]; then
   echo "entrypoint: port set to ${PORT}"
 fi
 
-# 2) Management key (required for /v0/management/* incl. plugin status).
+# 2) Management key (used when the file config is authoritative; ignored
+# when PGSTORE/GIT/OBJECT store holds the config in a database).
 if [ -n "${MANAGEMENT_KEY:-}" ]; then
   replace_literal "__MANAGEMENT_KEY__" "$MANAGEMENT_KEY" "$CONFIG"
   echo "entrypoint: management key injected"
 else
-  echo "entrypoint: WARNING: \$MANAGEMENT_KEY is empty; management API stays disabled until secret-key is set" >&2
+  echo "entrypoint: \$MANAGEMENT_KEY is empty; using config as-is (set it unless a DB store provides the config)"
 fi
 
 # 3) Proxy API key (clients call CPA with this).
@@ -62,13 +63,7 @@ if [ -n "${API_KEY:-}" ]; then
   replace_literal "__API_KEY__" "$API_KEY" "$CONFIG"
   echo "entrypoint: api key injected"
 else
-  echo "entrypoint: WARNING: \$API_KEY is empty; replace api-keys before use" >&2
-fi
-
-# 4) Fail fast if placeholders survived (means env vars were missing).
-if grep -q "__MANAGEMENT_KEY__\|__API_KEY__" "$CONFIG"; then
-  echo "entrypoint: ERROR: placeholders remain in $CONFIG; set MANAGEMENT_KEY and API_KEY env vars" >&2
-  exit 1
+  echo "entrypoint: \$API_KEY is empty; using config as-is (set it unless a DB store provides the config)"
 fi
 
 echo "entrypoint: plugins bundled:"
@@ -81,6 +76,11 @@ ls -lh /CLIProxyAPI/plugins/ || true
 # into Render env var MIRASIM_AUTH_B64. On this image auth-dir is
 # /root/.cli-proxy-api (see render.config.yaml; HOME=/root).
 AUTH_DIR="${CPA_AUTH_DIR:-$HOME/.cli-proxy-api}"
+# NOTE: when PGSTORE_DSN (or GITSTORE_*/OBJECTSTORE_*) is set, CPA ignores
+# auth-dir and Bootstraps its workspace FROM the database, wiping anything
+# seeded here. With a DB store, upload the credential once instead:
+#   POST /v0/management/auth-files  (Management Center -> Auth Files)
+# It is persisted in the database and survives redeploys.
 if [ -n "${MIRASIM_AUTH_B64:-}" ]; then
   if ! ls "$AUTH_DIR"/mirasim-*.json >/dev/null 2>&1; then
     mkdir -p "$AUTH_DIR"
