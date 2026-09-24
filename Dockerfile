@@ -61,7 +61,9 @@ RUN curl -fsSL -o "/tmp/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" \
   && unzip -o "/tmp/mirasim_${MIRASIM_VERSION}_linux_amd64.zip" -d /CLIProxyAPI/plugins \
   && rm -f /tmp/mirasim_*.zip /tmp/checksums.txt /CLIProxyAPI/plugins/*.h \
   && ls -lh /CLIProxyAPI/plugins/ \
-  && file /CLIProxyAPI/plugins/mirasim.so
+  && test -x /CLIProxyAPI/plugins/mirasim.so \
+  && head -c 4 /CLIProxyAPI/plugins/mirasim.so | od -An -tx1 | grep -q "7f 45 4c 46" \
+  && echo "mirasim.so: ELF shared object verified"
 
 WORKDIR /CLIProxyAPI
 
