@@ -318,3 +318,112 @@ This is a tool built with Tauri 2 + Vue 3 for managing multiple OpenAI Codex des
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+# Mirasim 本地登录与多账号管理（Fim98 部署专用）
+
+> 本节只适用于 `Fim98/CLIProxyAPI` 这个 fork 的部署方案（Render + mirasim 插件烘进镜像）。
+> 上游 README 的其余部分与插件登录无关，勿混看。
+
+## 本地登录工具链（已搭好，位于 /tmp/mirasim-local）
+
+```
+/tmp/mirasim-local/
+├── CLIProxyAPI      # 本地 arm64 版 CPA 主程序（go build ./cmd/server）
+├── mirasim.dylib    # 本地插件（go build -buildmode=c-shared；macOS 上必须 .dylib 后缀）
+├── config.yaml      # 登录专用最小配置（端口 18399，auth-dir 指向本地 auths/）
+└── auths/           # 登录成功后 mirasim-*.json 凭证落在这里
+```
+
+工具链丢失（如 /tmp 被清理）时重建：
+
+```bash
+# 1. 构建插件（在 cpa-plugin-mirasim 仓库）
+cd ~/Documents/cpa-plugin-mirasim
+go build -trimpath -buildmode=c-shared -o /tmp/mirasim-local/mirasim.dylib ./cmd/mirasim
+
+# 2. 构建 CPA（在 CLIProxyAPI 仓库）
+cd ~/Documents/CLIProxyAPI
+CGO_ENABLED=1 go build -trimpath -ldflags="-s -w" -o /tmp/mirasim-local/CLIProxyAPI ./cmd/server/
+
+# 3. 登录配置（写入 /tmp/mirasim-local/config.yaml）
+cat > /tmp/mirasim-local/config.yaml << 'YAML'
+host: ""
+port: 18399
+auth-dir: "/tmp/mirasim-local/auths"
+api-keys:
+  - "local-login-only"
+remote-management:
+  allow-remote: false
+  disable-control-panel: true
+debug: false
+plugins:
+  enabled: true
+  dir: "/tmp/mirasim-local"
+  configs:
+    mirasim:
+      enabled: true
+YAML
+mkdir -p /tmp/mirasim-local/auths
+```
+
+前提：`go`（`brew install go`）和 Xcode 工具链（c-shared 需要 C 编译器）。
+
+## 登录一个账号
+
+### 邮箱验证码登录（推荐，无浏览器依赖）
+
+```bash
+cd /tmp/mirasim-local
+./CLIProxyAPI -config config.yaml --mirasim-login --mirasim-login-email <邮箱>
+# 终端提示 Enter the Mirasim sign-in code: 时，输入邮箱收到的验证码，回车
+# 成功输出: Authentication saved to /tmp/mirasim-local/auths/mirasim-usr_*.json
+```
+
+注意：邮箱验证码登录**不走浏览器**，纯终端完成。第一次跑只发码；如果终端无法交互，
+可先跑一次发码，再带码重跑：`--mirasim-login-email <邮箱> --mirasim-login-code <验证码>`。
+
+### GitHub/Google OAuth 浏览器登录
+
+```bash
+cd /tmp/mirasim-local
+./CLIProxyAPI -config config.yaml --mirasim-login
+# 弹浏览器 → 授权 → 回调自动落到本机 127.0.0.1 监听器 → 凭证自动落盘
+```
+
+## 多账号
+
+- 每跑一次登录就多一个 `mirasim-*.json`（文件名含账号 ID，互不覆盖）
+- 登录产生的设备身份（device key）每份凭证独立；relay 若对某设备限流（429
+  region blocked），新登录一个账号即换新设备身份，通常可绕开
+- 本地测试多账号：把多个 json 一起放进 auths/ 再启动即可
+
+## 上传凭证到 Render（存 Postgres，重启/重部署不丢）
+
+管理面板（https://cpa.fim98.dpdns.org/management.html）→ Auth Files → 上传
+`mirasim-*.json`；或：
+
+```bash
+curl -X POST "https://cpa.fim98.dpdns.org/v0/management/auth-files" \
+  -H "Authorization: Bearer <MANAGEMENT_KEY>" \
+  -F "file=@/tmp/mirasim-local/auths/mirasim-usr_xxx.json"
+```
+
+上传后插件自动刷新 token（15 分钟周期）并写回 Postgres，无需再管。
+
+## 常见坑
+
+| 症状 | 原因与处理 |
+|---|---|
+| 429 "云端中转未在当前网络区域提供服务" | relay 对设备/账号的临时限流。等冷却（几分钟到几小时），或换号/换 IP 重试。桌面客户端不受影响是因为它的设备票据还热着 |
+| 本地 /v1/models 返回空 | 凭证未加载或 relay 限流中；看 server.log 里 `models for auth ... failed` 行 |
+| Render 上模型列表为空但插件已注册 | Postgres 配置缺 `plugins:` 段（管理面板配置页加上 `plugins.enabled: true` / `dir: "plugins"` / mirasim `enabled: true` 后重启服务） |
+| macOS 构建插件后 CPA 不加载 | 插件文件名必须是 `.dylib`（Linux 才是 `.so`） |
+| 凭证文件放哪 | `/tmp` 会丢；长期备份放 `~/.cli-proxy-api/` 或私密网盘，勿放公开目录 |
+
+## 版本对应
+
+- 插件 release：`Fim98/cpa-plugin-mirasim`（fork 自 KIDA-MNESIA，加了国产模型支持）
+- Render 镜像里的插件版本由 `Dockerfile` 的 `ARG MIRASIM_VERSION` 控制（当前 1.3.1）
+- 改插件代码后发版：`git tag vX.Y.Z && git push fork vX.Y.Z`，GitHub Actions 自动构建发布
