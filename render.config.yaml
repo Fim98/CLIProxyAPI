@@ -1,0 +1,54 @@
+# Render deploy config for CLIProxyAPI + mirasim plugin.
+# In git this file is named render.config.yaml (because `config.yaml` is in
+# .gitignore and would never be pushed). Dockerfile.render copies it to
+# /CLIProxyAPI/config.yaml inside the image.
+#
+# Secrets (__MANAGEMENT_KEY__ / __API_KEY__) are placeholders.
+# deploy/entrypoint.sh replaces them with $MANAGEMENT_KEY / $API_KEY
+# environment variables at container start, so no secret is committed.
+
+host: ""
+
+# Overwritten at runtime from $PORT by deploy/entrypoint.sh.
+# Render injects PORT=10000 by default; keep 8317 as local fallback.
+port: 8317
+
+trusted-proxies: []
+
+tls:
+  enable: false
+  cert: ""
+  key: ""
+
+remote-management:
+  # Render accesses management API remotely -> must be true,
+  # otherwise only localhost can reach /v0/management/* even with a key.
+  allow-remote: true
+  # Placeholder, replaced by $MANAGEMENT_KEY at container start.
+  # Plaintext here is hashed by CPA on first boot.
+  secret-key: "__MANAGEMENT_KEY__"
+  disable-control-panel: false
+
+# Local file store by default (ephemeral on Render: login/token lost on
+# restart/redeploy). For persistence, set PGSTORE_DSN (or OBJECTSTORE_* /
+# GITSTORE_*) as Render environment variables -- cmd/server/main.go picks
+# them up automatically and overrides auth-dir, no config change needed.
+auth-dir: "~/.cli-proxy-api"
+
+# Placeholder, replaced by $API_KEY at container start.
+# Must NOT be your-api-key-1/2/3 (CPA safe-mode disables proxy endpoints).
+api-keys:
+  - "__API_KEY__"
+
+debug: false
+
+plugins:
+  enabled: true
+  dir: "plugins"
+  configs:
+    mirasim:
+      enabled: true
+      # First deploy: leave callback port unset, just verify the plugin
+      # loads (registered:true effective_enabled:true).
+      # When you need browser login via SSH tunnel, pin a port here:
+      # oauth-callback-port: 18317

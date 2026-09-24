@@ -1,0 +1,32 @@
+# Render Blueprint for CLIProxyAPI + mirasim plugin (A方案: 烘进镜像).
+# Push this repo to YOUR OWN GitHub repo, then Render -> New -> Blueprint
+# -> select the repo. Render builds Dockerfile.render automatically.
+services:
+  - type: web
+    name: cpa
+    runtime: docker
+    dockerfilePath: ./Dockerfile.render
+    # Build-time plugin version. Bump together with the .so release:
+    #   dockerBuildArgs: MIRASIM_VERSION=1.2.0
+    dockerBuildArgs:
+      MIRASIM_VERSION: "1.2.0"
+    # Health check against the management plugin list (needs key, so use
+    # root path here; verify /v0/management/plugins manually after deploy).
+    healthCheckPath: /
+    # CPA listens on $PORT via deploy/entrypoint.sh; default here is only
+    # a fallback when Render does not inject PORT.
+    envVars:
+      - key: PORT
+        value: 8317
+      - key: DEPLOY
+        value: ""
+      # Set these in Render Dashboard -> Environment (secret values!):
+      # - MANAGEMENT_KEY: bearer key for /v0/management/* (required)
+      # - API_KEY:        key your clients send to CPA (required)
+      # Persistence (pick ONE when login drops become painful):
+      # - PGSTORE_DSN:    postgresql://user:pass@host:5432/cliproxy
+      # - PGSTORE_SCHEMA: public
+      - key: MANAGEMENT_KEY
+        sync: false
+      - key: API_KEY
+        sync: false
