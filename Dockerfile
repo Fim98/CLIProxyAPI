@@ -1,4 +1,4 @@
-ARG MIRASIM_VERSION=1.2.0
+ARG MIRASIM_VERSION=1.3.1
 # ------------------------------------------------------------------
 # Stage 1: build CPA server from this source tree (upstream v7.3.16).
 # ------------------------------------------------------------------
