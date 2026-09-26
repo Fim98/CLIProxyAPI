@@ -154,4 +154,3 @@ func zedCallbackHandler(successURL string, results chan<- callbackResult) http.H
 	})
 	return mux
 }
-

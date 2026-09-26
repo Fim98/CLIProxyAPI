@@ -18,7 +18,7 @@ import (
 type AuthSaver func(name string, payload []byte) error
 
 var (
-	saverMu    sync.RWMutex
+	saverMu     sync.RWMutex
 	sharedSaver AuthSaver
 )
 

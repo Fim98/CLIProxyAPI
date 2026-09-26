@@ -26,7 +26,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -buildvcs=false \
 # ------------------------------------------------------------------
 RUN cd /app/plugin/zed \
   && CGO_ENABLED=1 GOOS=linux go build -buildvcs=false -trimpath -buildmode=c-shared \
-     -ldflags="-s -w -X main.pluginVersion=0.2.0" \
+     -ldflags="-s -w -X main.pluginVersion=0.2.1" \
      -o /zed.so ./cmd/zed
 
 # ------------------------------------------------------------------

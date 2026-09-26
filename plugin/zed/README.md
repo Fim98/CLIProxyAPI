@@ -59,17 +59,28 @@ plugins:
 
 The plugin id comes from the library file name (`zed[-v<version>].dylib`) and must match the `plugins.configs.zed` key.
 
-## Login
+## Login (browser click-through, remote-host friendly)
 
-Either use the Management Center (`GET /v0/management/zed-auth-url`, then poll `GET /v0/management/get-auth-status?state=...`) or the CLI flag:
+Management Center: click OAuth login for **zed** — the panel opens the plugin's
+own relay page (`/v0/resource/plugins/zed/login?state=...`), which opens the
+real Zed sign-in and then captures the callback. Because Zed always redirects
+the callback to `http://127.0.0.1:...` on the *browser's* machine, a remote CPA
+host (e.g. Render) can never see it: the relay page asks you to paste that
+address-bar URL back, completes the sign-in server-side, and saves one
+credential file per organization. The Management Center poll then reports
+success. When the browser happens to run on the CPA host itself, the loopback
+listener captures the callback automatically and the paste step is unnecessary.
+
+CLI equivalent:
 
 ```bash
 ./cli-proxy-api --config config.yaml --zed-login
 ```
 
-A browser opens Zed's `/native_app_signin` page; after sign-in the browser redirects to the loopback listener and the plugin validates the account and saves **one auth file per organization**, e.g. `zed-<username>-<org-id>.json` in CPA's `auth-dir`. A remote CPA host needs `oauth-callback-port` pinned and an SSH tunnel for the duration of the login, exactly like the desktop client's local HTTP callback.
-
-Credentials carry no refresh token — Zed's desktop client re-signs in through the browser when its long-lived token is rejected. The plugin re-validates each credential every 6 hours via `GET /client/users/me`; when that starts returning 401, run the login again.
+Credentials carry no refresh token — Zed's desktop client re-signs in through
+the browser when its long-lived token is rejected. The plugin re-validates each
+credential every 6 hours via `GET /client/users/me`; when that starts returning
+401, run the login again.
 
 ## Configuration reference
 

@@ -25,18 +25,18 @@ const ProfileRefreshInterval = 6 * time.Hour
 // auth-dir. Zed's browser sign-in yields a single long-lived access token; the
 // per-organization LLM token is minted on demand and never persisted.
 type Storage struct {
-	StorageVersion   int    `json:"storage_version,omitempty"`
-	Type             string `json:"type"`
-	UserID           string `json:"user_id"`
-	AccessToken      string `json:"access_token"`
-	SystemID         string `json:"system_id,omitempty"`
-	Username         string `json:"username,omitempty"`
-	Email            string `json:"email,omitempty"`
-	OrganizationID   string `json:"organization_id,omitempty"`
-	OrganizationName string `json:"organization_name,omitempty"`
-	Plan             string `json:"plan,omitempty"`
-	ServerURL        string `json:"server_url,omitempty"`
-	LastRefresh      string `json:"last_refresh,omitempty"`
+	StorageVersion   int            `json:"storage_version,omitempty"`
+	Type             string         `json:"type"`
+	UserID           string         `json:"user_id"`
+	AccessToken      string         `json:"access_token"`
+	SystemID         string         `json:"system_id,omitempty"`
+	Username         string         `json:"username,omitempty"`
+	Email            string         `json:"email,omitempty"`
+	OrganizationID   string         `json:"organization_id,omitempty"`
+	OrganizationName string         `json:"organization_name,omitempty"`
+	Plan             string         `json:"plan,omitempty"`
+	ServerURL        string         `json:"server_url,omitempty"`
+	LastRefresh      string         `json:"last_refresh,omitempty"`
 	Raw              map[string]any `json:"-"`
 }
 

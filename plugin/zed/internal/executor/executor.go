@@ -55,10 +55,10 @@ func New(settings zedconfig.Settings, tokens *zed.TokenPool) *Executor {
 func (e *Executor) Identifier() string { return credentials.Provider }
 
 type completionBody struct {
-	ThreadID       string          `json:"thread_id,omitempty"`
-	PromptID       string          `json:"prompt_id,omitempty"`
-	Provider       string          `json:"provider"`
-	Model          string          `json:"model"`
+	ThreadID        string          `json:"thread_id,omitempty"`
+	PromptID        string          `json:"prompt_id,omitempty"`
+	Provider        string          `json:"provider"`
+	Model           string          `json:"model"`
 	ProviderRequest json.RawMessage `json:"provider_request"`
 }
 
@@ -339,10 +339,10 @@ func (e *Executor) buildCompletionBody(ctx context.Context, storage credentials.
 		return nil, "", errNormalize
 	}
 	body, errMarshal := json.Marshal(completionBody{
-		ThreadID:       uuid.NewString(),
-		PromptID:       uuid.NewString(),
-		Provider:       provider,
-		Model:          model,
+		ThreadID:        uuid.NewString(),
+		PromptID:        uuid.NewString(),
+		Provider:        provider,
+		Model:           model,
 		ProviderRequest: requestBody,
 	})
 	if errMarshal != nil {
@@ -375,6 +375,11 @@ func normalizeProviderRequest(requestBody []byte, wire sdktranslator.Format, str
 	updated, errMarshal := json.Marshal(payload)
 	if errMarshal != nil {
 		return nil, fmt.Errorf("encode Zed provider request: %w", errMarshal)
+	}
+	if wire == sdktranslator.FormatOpenAIResponse {
+		// Zed parses Responses input with strict tagged enums; the lax OpenAI
+		// dialect (items without "type", string content) must be normalized.
+		updated = normalizeZedResponsesRequest(updated)
 	}
 	return updated, nil
 }
