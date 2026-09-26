@@ -66,6 +66,14 @@ else
   echo "entrypoint: \$API_KEY is empty; using config as-is (set it unless a DB store provides the config)"
 fi
 
+# 4) Zed plugin: public origin of this deployment, used to build the
+# browser sign-in relay page URL. Render injects RENDER_EXTERNAL_URL
+# automatically (e.g. https://my-app.onrender.com).
+if [ -n "${RENDER_EXTERNAL_URL:-}" ]; then
+  replace_literal "__PUBLIC_URL__" "$RENDER_EXTERNAL_URL" "$CONFIG"
+  echo "entrypoint: zed public url set to ${RENDER_EXTERNAL_URL}"
+fi
+
 echo "entrypoint: plugins bundled:"
 ls -lh /CLIProxyAPI/plugins/ || true
 

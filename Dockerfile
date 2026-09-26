@@ -20,6 +20,16 @@ RUN CGO_ENABLED=1 GOOS=linux go build -buildvcs=false \
   -o ./CLIProxyAPI ./cmd/server/
 
 # ------------------------------------------------------------------
+# Stage 1b: build the Zed OAuth plugin (nested module under plugin/zed)
+# as a c-shared library against this exact source tree, so the plugin
+# and the server always share the same plugin ABI.
+# ------------------------------------------------------------------
+RUN cd /app/plugin/zed \
+  && CGO_ENABLED=1 GOOS=linux go build -buildvcs=false -trimpath -buildmode=c-shared \
+     -ldflags="-s -w -X main.pluginVersion=0.2.0" \
+     -o /zed.so ./cmd/zed
+
+# ------------------------------------------------------------------
 # Stage 2: runtime with CPA + mirasim plugin baked in.
 # Render filesystem is ephemeral, so the .so MUST be inside the image,
 # not mounted as a volume. We download the official release asset at
@@ -53,6 +63,11 @@ COPY render.config.yaml /CLIProxyAPI/config.yaml
 # default) so health checks pass no matter what port Render expects.
 COPY deploy/entrypoint.sh /CLIProxyAPI/entrypoint.sh
 RUN chmod +x /CLIProxyAPI/entrypoint.sh
+
+# Zed OAuth plugin: built from plugin/zed in this repo (see stage 1b).
+COPY --from=builder /zed.so /CLIProxyAPI/plugins/zed.so
+RUN head -c 4 /CLIProxyAPI/plugins/zed.so | od -An -tx1 | grep -q "7f 45 4c 46" \
+  && echo "zed.so: ELF shared object verified"
 
 # Fetch + verify the mirasim plugin for linux/amd64 (what Render runs).
 # Download with the release asset's own filename so `sha256sum -c` finds

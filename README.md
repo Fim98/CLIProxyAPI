@@ -427,3 +427,60 @@ curl -X POST "https://cpa.fim98.dpdns.org/v0/management/auth-files" \
 - 插件 release：`Fim98/cpa-plugin-mirasim`（fork 自 KIDA-MNESIA，加了国产模型支持）
 - Render 镜像里的插件版本由 `Dockerfile` 的 `ARG MIRASIM_VERSION` 控制（当前 1.3.1）
 - 改插件代码后发版：`git tag vX.Y.Z && git push fork vX.Y.Z`，GitHub Actions 自动构建发布
+
+---
+
+# Zed 账号插件（浏览器一键 OAuth）
+
+`plugin/zed/` 是随本仓库一起构建的 CLIProxyAPI 原生插件：用 **Zed 账号**登录后，
+把 Zed 云端 AI（Claude / GPT / Gemini / Grok 全系）代理成 OpenAI/Claude/Gemini 兼容接口。
+Docker 构建时自动编译进镜像（`plugins/zed.so`），无需手动下载。
+
+## 登录方式：浏览器一键 OAuth（专为 Render 远程部署设计）
+
+Zed 的登录回调固定跳到 `http://127.0.0.1:端口/...`（浏览器所在机器），远程部署收不到。
+插件在 CPA 里自托管了一个中转页来完成闭环：
+
+1. 管理面板（https://cpa.fim98.dpdns.org/management.html）→ OAuth 登录 → 选 **zed**
+   （或 `GET /v0/management/zed-auth-url`）
+2. 面板会打开插件中转页 → 点「打开 Zed 登录页面」→ 在 zed.dev 完成授权
+3. 授权后浏览器跳到 `http://127.0.0.1:.../?user_id=...&access_token=...`（打不开是正常的）
+4. 把地址栏完整网址复制 → 粘贴回中转页输入框 → 点「完成登录」
+5. 页面显示保存了几个组织的凭据，管理面板里立即出现 `zed-<用户名>-<组织>.json`
+
+**按组织区分**：Zed 按 organization 计费。一个账号属于多个组织时，一次登录会自动
+保存**每个组织一份凭据**（默认组织排最前），调度器可在组织间轮换。只想登录某一个
+组织时在配置里加 `organization-id: <组织ID>`。
+
+本机部署（浏览器和 CPA 同机）时回调自动落盘，粘贴这步可以直接跳过。
+
+## 验证
+
+```bash
+# 插件已注册（Render 部署后看日志）：
+#   pluginhost: plugin registered plugin_id=zed plugin_name=Zed Provider
+curl -H "X-Management-Key: <MANAGEMENT_KEY>" \
+  "https://cpa.fim98.dpdns.org/v0/management/zed-auth-url"    # 返回中转页 URL
+
+# 测试调用（省 token：Claude 系用最便宜的 haiku）
+curl "https://cpa.fim98.dpdns.org/v1/chat/completions" \
+  -H "Authorization: Bearer <API_KEY>" -H "Content-Type: application/json" \
+  -d '{"model":"claude-haiku-4-5","messages":[{"role":"user","content":"hi"}],"max_tokens":16}'
+```
+
+## 配置（plugins.configs.zed）
+
+| 键 | 默认 | 说明 |
+|---|---|---|
+| `public-url` | 空 | 本部署公网地址（entrypoint 用 `RENDER_EXTERNAL_URL` 自动填）；不填面板用相对路径也能打开中转页 |
+| `organization-id` | 空 | 登录时只保存这个组织；不填保存全部组织 |
+| `client-version` | 1.23.0 | 上报的 Zed 客户端版本（User-Agent / x-zed-version） |
+| `server-url` / `cloud-url` | zed.dev / cloud.zed.dev | 官方端点，一般不动 |
+
+## 注意
+
+- **Postgres 存配置时**：DB 里的配置会覆盖文件。若部署后 `/zed-auth-url` 404，
+  在管理面板配置页确认 `plugins:` 段包含 `zed: {enabled: true}`（`public-url` 可留空）。
+- Zed 凭据没有 refresh token，长期有效；插件每 6 小时自动校验一次。若校验开始
+  返回 401，重新走一遍上面的登录流程即可。
+- 插件代码在 `plugin/zed/`（嵌套 Go module），改完直接 push，Render 重新构建即生效。

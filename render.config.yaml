@@ -52,3 +52,11 @@ plugins:
       # loads (registered:true effective_enabled:true).
       # When you need browser login via SSH tunnel, pin a port here:
       # oauth-callback-port: 18317
+    zed:
+      enabled: true
+      # 浏览器一键 OAuth：Management Center 点 Zed 登录 -> 插件中转页 ->
+      # zed.dev 授权 -> 把浏览器 127.0.0.1 回调地址粘贴回中转页即完成，
+      # 每个组织各保存一份凭据。
+      # public-url 由 entrypoint 用 RENDER_EXTERNAL_URL 替换；不设置时
+      # 面板用相对路径也能打开中转页。
+      public-url: "__PUBLIC_URL__"
